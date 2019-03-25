@@ -28,7 +28,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     // Layer UI for drawing Vision results
     var rootLayer: CALayer?
     var detectionOverlayLayer: CALayer?
-    var detectedMaskLayer: CALayer?
     var masks: [MaskType:CALayer]?
     var detectedFaceRectangleShapeLayer: CAShapeLayer?
     var detectedFaceLandmarksShapeLayer: CAShapeLayer?
@@ -355,20 +354,10 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         
         rootLayer.addSublayer(overlayLayer)
         
-
-
         
         self.detectionOverlayLayer = overlayLayer
         self.detectedFaceRectangleShapeLayer = faceRectangleShapeLayer
         self.detectedFaceLandmarksShapeLayer = faceLandmarksShapeLayer
-//        self.detectedMaskLayer = sublayer
-        
-
-        
-        let image = UIImage(named: "nose2")
-        let imageView = UIImageView(image: image!)
-        imageView.frame = CGRect(x: 0, y: 0, width: 60, height: 60)
-        view.addSubview(imageView)
         
         self.updateLayerGeometry()
     }
@@ -437,8 +426,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     
     fileprivate func addIndicators(to faceRectanglePath: CGMutablePath, faceLandmarksPath: CGMutablePath, for faceObservation: VNFaceObservation) {
         let displaySize = self.captureDeviceResolution
-        
-//        guard let sublayer = self.detectedMaskLayer else{ return }
         
         let faceBounds = VNImageRectForNormalizedRect(faceObservation.boundingBox, Int(displaySize.width), Int(displaySize.height))
         faceRectanglePath.addRect(faceBounds)
