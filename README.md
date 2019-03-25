@@ -145,4 +145,5 @@ enum MaskType {
 Obviously, both these configurations can be added in the sperate file for scalability purposes. I would also like to change the masks on taps and swipes but I have avoided that for now just to save time. I am randomly sending the masks on each app load.
 
 
-The first four points are discussed in apple sample code [here] (https://developer.apple.com/documentation/vision/tracking_the_user_s_face_in_real_time) this project has provided the bases for this application. The first four points are catered on this link please check that out.
+The first four points are discussed in apple sample code 
+[here](https://developer.apple.com/documentation/vision/tracking_the_user_s_face_in_real_time) this project has provided the bases for this application. The first four points are catered on this link please check that out.
