@@ -9,6 +9,7 @@ import UIKit
 import AVKit
 import Vision
 
+
 class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     
     // Main view for showing camera content.
@@ -27,8 +28,12 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     // Layer UI for drawing Vision results
     var rootLayer: CALayer?
     var detectionOverlayLayer: CALayer?
+    var detectedMaskLayer: CALayer?
+    var masks: [MaskType:CALayer]?
     var detectedFaceRectangleShapeLayer: CAShapeLayer?
     var detectedFaceLandmarksShapeLayer: CAShapeLayer?
+    
+    var eyeMask: CGImage?
     
     // Vision requests
     private var detectionRequests: [VNDetectFaceRectanglesRequest]?
@@ -297,10 +302,10 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         faceRectangleShapeLayer.anchorPoint = normalizedCenterPoint
         faceRectangleShapeLayer.position = captureDeviceBoundsCenterPoint
         faceRectangleShapeLayer.fillColor = nil
-        faceRectangleShapeLayer.strokeColor = UIColor.green.withAlphaComponent(0.7).cgColor
-        faceRectangleShapeLayer.lineWidth = 5
-        faceRectangleShapeLayer.shadowOpacity = 0.7
-        faceRectangleShapeLayer.shadowRadius = 5
+//        faceRectangleShapeLayer.strokeColor = UIColor.green.withAlphaComponent(0.7).cgColor
+//        faceRectangleShapeLayer.lineWidth = 5
+//        faceRectangleShapeLayer.shadowOpacity = 0.7
+//        faceRectangleShapeLayer.shadowRadius = 5
         
         let faceLandmarksShapeLayer = CAShapeLayer()
         faceLandmarksShapeLayer.name = "FaceLandmarksLayer"
@@ -308,18 +313,62 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         faceLandmarksShapeLayer.anchorPoint = normalizedCenterPoint
         faceLandmarksShapeLayer.position = captureDeviceBoundsCenterPoint
         faceLandmarksShapeLayer.fillColor = nil
-        faceLandmarksShapeLayer.strokeColor = UIColor.yellow.withAlphaComponent(0.7).cgColor
-        faceLandmarksShapeLayer.lineWidth = 3
-        faceLandmarksShapeLayer.shadowOpacity = 0.7
-        faceLandmarksShapeLayer.shadowRadius = 5
+//        faceLandmarksShapeLayer.strokeColor = UIColor.yellow.withAlphaComponent(0.7).cgColor
+//        faceLandmarksShapeLayer.lineWidth = 3
+//        faceLandmarksShapeLayer.shadowOpacity = 0.7
+//        faceLandmarksShapeLayer.shadowRadius = 5
         
         overlayLayer.addSublayer(faceRectangleShapeLayer)
         faceRectangleShapeLayer.addSublayer(faceLandmarksShapeLayer)
+        
+        
+        masks = [MaskType:CALayer]()
+        
+        masks?[.nose] = CALayer()
+        masks?[.lips] = CALayer()
+        masks?[.eyeLeft] = CALayer()
+        masks?[.eyeRight] = CALayer()
+//        masks?[.beard] = CALayer()
+
+        
+        for mask in masks ?? [:]{
+            let sublayer = mask.value
+            sublayer.bounds = captureDeviceBounds
+            sublayer.anchorPoint = normalizedCenterPoint
+            sublayer.frame = CGRect(x: self.view.center.x, y: self.view.center.y, width: 60, height: 60)
+
+            if mask.key == .eyeLeft || mask.key == .eyeRight {
+                if let em = eyeMask {
+                    sublayer.contents = em
+                } else {
+                    eyeMask = mask.key.getImage()
+                    sublayer.contents = eyeMask
+                }
+            } else {
+                sublayer.contents = mask.key.getImage()
+            }
+            
+            sublayer.position = captureDeviceBoundsCenterPoint
+
+            faceRectangleShapeLayer.addSublayer(sublayer)
+        }
+        
         rootLayer.addSublayer(overlayLayer)
+        
+
+
         
         self.detectionOverlayLayer = overlayLayer
         self.detectedFaceRectangleShapeLayer = faceRectangleShapeLayer
         self.detectedFaceLandmarksShapeLayer = faceLandmarksShapeLayer
+//        self.detectedMaskLayer = sublayer
+        
+
+        
+        let image = UIImage(named: "nose2")
+        let imageView = UIImageView(image: image!)
+        imageView.frame = CGRect(x: 0, y: 0, width: 60, height: 60)
+        view.addSubview(imageView)
         
         self.updateLayerGeometry()
     }
@@ -389,14 +438,62 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     fileprivate func addIndicators(to faceRectanglePath: CGMutablePath, faceLandmarksPath: CGMutablePath, for faceObservation: VNFaceObservation) {
         let displaySize = self.captureDeviceResolution
         
+//        guard let sublayer = self.detectedMaskLayer else{ return }
+        
         let faceBounds = VNImageRectForNormalizedRect(faceObservation.boundingBox, Int(displaySize.width), Int(displaySize.height))
         faceRectanglePath.addRect(faceBounds)
+        
+        if let masks = masks {
+            for mask in masks {
+                let sublayer = mask.value
+
+                var points : [CGPoint]?
+
+                switch mask.key {
+                case .nose:
+                    points = faceObservation.landmarks?.nose?.normalizedPoints
+                    break
+                case .beard:
+                    points = faceObservation.landmarks?.faceContour?.normalizedPoints
+                    break
+                case .lips:
+                    points = faceObservation.landmarks?.outerLips?.normalizedPoints
+                    break
+                case .eyeBrowLeft:
+                    points = faceObservation.landmarks?.leftEyebrow?.normalizedPoints
+                    break
+                case .eyeBrowRight:
+                    points = faceObservation.landmarks?.rightEyebrow?.normalizedPoints
+                    break
+                case .eyeLeft:
+                    points = faceObservation.landmarks?.leftEye?.normalizedPoints
+                    break
+                case .eyeRight:
+                    points = faceObservation.landmarks?.rightEye?.normalizedPoints
+                    break
+                    
+                }
+                
+
+                if let points = points{
+
+                    if let rect = MasksUtil.getLandmarkPositionAndSizeNormalized(normalizedPoints: points, faceBounds: faceBounds, MaskType: mask.key){
+                        
+                        let maskPosition = CGPoint(x: rect.origin.x,y: rect.origin.y)
+                        sublayer.frame.size = CGSize(width: rect.size.width, height: rect.size.height)
+
+                        MasksUtil.renderMaskInNormailzed(sublayer: sublayer, maskPosition: maskPosition, faceBounds: faceBounds)
+                    }
+                }
+            }
+        }
         
         if let landmarks = faceObservation.landmarks {
             // Landmarks are relative to -- and normalized within --- face bounds
             let affineTransform = CGAffineTransform(translationX: faceBounds.origin.x, y: faceBounds.origin.y)
                 .scaledBy(x: faceBounds.size.width, y: faceBounds.size.height)
             
+
             // Treat eyebrows and lines as open-ended regions when drawing paths.
             let openLandmarkRegions: [VNFaceLandmarkRegion2D?] = [
                 landmarks.leftEyebrow,
@@ -437,11 +534,13 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         
         let faceRectanglePath = CGMutablePath()
         let faceLandmarksPath = CGMutablePath()
+
         
         for faceObservation in faceObservations {
             self.addIndicators(to: faceRectanglePath,
                                faceLandmarksPath: faceLandmarksPath,
                                for: faceObservation)
+            
         }
         
         faceRectangleShapeLayer.path = faceRectanglePath
