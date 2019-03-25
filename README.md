@@ -10,6 +10,7 @@ The app is capable of masking different facial landmarks of a face in real time.
 
 ![Sample 3](https://lh5.googleusercontent.com/3Yl0demEgQD0HIR9f8VeZMDe_Z9qRFsH0-yYtsTHm-sLYF8qOVgEDM2WY7WZAxK3G9iaBMpJLNrqAM9JqgQ6=w600-h200-rw)
 
+## Basic Features
 
 The basic components app are:
 
@@ -26,7 +27,9 @@ The Capture library off the box provides two very critical feature required for 
 
 Now here we have another consideration to make, which is the framework decision for rendering masks. Core Graphics vs Core Animation. The CA uses GPU to render views and is designed for animation and translation related stuff. and we need real-time response in the screen so it is best to take advantage of GPU. instead of relying on core graphics which is CPU based. Once graphics library decision is out of the way was selected now we can start rendering the mask.
 
+## Problems and resolutions
 
+### 5. Masking different landmarks with custom images
 The first problem is the coordinate system origin unification. the AVFoundation consider the lower left corner as the origin point on the other hand Vision considers the upper left corner as the origin point. We need some sort of adaptor to translate the systems for this problem the image was flipped. and also as the points are normalized, they were scaled to the capture window size.
 
 
@@ -42,7 +45,7 @@ The first problem is the coordinate system origin unification. the AVFoundation 
 
     }
 ```
-
+### 6. Dynamic Size adjustment for the mask to size and position according to the real-time landmark size.
 The second problem is the position and size of the masking doodle itself. The positions of landmarks are the irregular point they are not frames where one might be able to render a picture so somehow their centre point was to be found to place the image at that point. The next problem was the size fo doodle for that we took the difference of further points. as the points are normalized they were scaled to the screen size.
 
 
@@ -147,3 +150,8 @@ Obviously, both these configurations can be added in the sperate file for scalab
 
 The first four points are discussed in apple sample code 
 [here](https://developer.apple.com/documentation/vision/tracking_the_user_s_face_in_real_time) this project has provided the bases for this application. The first four points are catered on this link please check that out.
+
+## Future
+
+1. Taps/Swipe based doodle/mask switch.
+2. The masks move and scaled in 2d as the face moves around but when face is looking at an angle the the macks should also altered oin the direction which is possible is CA frameword with 3d tranformations but to keep things simple i have ont done that yet.
